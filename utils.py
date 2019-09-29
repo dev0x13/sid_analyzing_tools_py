@@ -1,5 +1,6 @@
 import os
 import sys
+import random
 
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__))))
 
@@ -46,6 +47,64 @@ def find_longest_transition(transitions):
                 longest_transition = t
 
     return longest_transition
+
+
+def get_opt_beladi_cache_hit_ratio(transitions, cache_size_bytes):
+    actions_seq = []
+    get_keys_seq = []
+    items_sizes = {}
+
+    for t in transitions:
+        for a in t.actions_sequence:
+            if a.type == "Get":
+                get_keys_seq.append(a.item_key)
+                items_sizes[a.item_key] = a.item_size_bytes
+                actions_seq.append(a)
+            elif a.type == "Set":
+                items_sizes[a.item_key] = a.item_size_bytes
+                actions_seq.append(a)
+
+    current_cache_items = {}
+    num_hits = 0
+    num_misses = 0
+    num_accesses = 0
+
+    def current_cache_size():
+        return sum(current_cache_items.values())
+
+    for a in actions_seq:
+        if a.type == "Set":
+            if a.item_size_bytes <= cache_size_bytes:
+                if a.item_size_bytes <= cache_size_bytes - current_cache_size():
+                    current_cache_items[a.item_key] = a.item_size_bytes
+                else:
+                    while a.item_size_bytes > cache_size_bytes - current_cache_size():
+                        garbage = []
+
+                        for k in current_cache_items:
+                            if k not in get_keys_seq:
+                                garbage.append(k)
+
+                        if len(garbage) != 0:
+                            for g in garbage:
+                                del current_cache_items[g]
+                        else:
+                            for key_to_get in reversed(get_keys_seq):
+                                if key_to_get in current_cache_items:
+                                    del current_cache_items[key_to_get]
+                                    break
+
+                    current_cache_items[a.item_key] = a.item_size_bytes
+
+        elif a.type == "Get":
+            num_accesses += 1
+            if a.item_key not in current_cache_items:
+                num_misses += 1
+            else:
+                num_hits += 1
+            get_keys_seq.remove(a.item_key)
+
+    return num_hits / num_accesses
 
 
 def get_cache_summary(transitions):

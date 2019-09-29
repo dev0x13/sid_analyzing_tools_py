@@ -2,7 +2,7 @@ import re
 
 
 class DataModelState:
-    regexp = re.compile("DataModelState\{(.*?)\}")
+    regexp = re.compile(r"DataModelState\{(.*?)\}")
 
     def __init__(self, state_str):
         self.items = {}
@@ -27,7 +27,7 @@ class DataModelState:
 
 
 class DataModelAction:
-    regexp = re.compile("DataModelAction\{(.*?)\}")
+    regexp = re.compile(r"DataModelAction\{(.*?)\}")
 
     def __init__(self, action_str):
         fields = DataModelAction.regexp.search(action_str).group(1)
