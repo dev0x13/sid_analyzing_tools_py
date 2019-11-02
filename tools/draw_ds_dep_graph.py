@@ -83,6 +83,7 @@ if __name__ == "__main__":
     for k, v in nodes.items():
         # 2.1. Skip root
         if v == "0":
+            deps.add_node("0", style="filled", label='<<b>0</b>>', fontsize='15', fontname="Arial")
             continue
 
         # 2.2. Build node color according to the number of its users
@@ -94,7 +95,7 @@ if __name__ == "__main__":
             result_color += (";%.2f:" % part if result_color != "" else "") + "%s" % estimators_colors[e]
 
         # 2.3. Add node
-        deps.add_node(v, style="filled", gradientangle=180, color=result_color)
+        deps.add_node(v, style="filled", label='<<b>%s</b>>' % v, gradientangle=180, color=result_color, fontsize='15', fontname="Arial")
 
     # 2.4. Add edges
 
@@ -115,8 +116,12 @@ if __name__ == "__main__":
     plt.legend(
         [Line2D([0], [0], color=v, lw=4) for v in estimators_colors.values()],
         estimators_colors.keys(),
-        loc="upper left",
-        prop={'size': 8}
+        loc="upper center",
+        bbox_to_anchor=(0.5, 0.01),
+        shadow=True,
+        fancybox=True,
+        ncol=2,
+        prop={'size': 22}
     )
     plt.axis('off')
 

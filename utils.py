@@ -15,12 +15,13 @@ class CacheSummary:
         self.hit_ratio = 0
         self.total_get_duration_micro_s = 0
         self.total_set_duration_micro_s = 0
+        self.mean_access_duration_ms = 0
 
     def __str__(self):
         return "Cache summary:\n  num_accesses = %i\n  num_misses = %i\n  num_hits = %i\n  hit_ratio = %.2f\n" \
-               "  total_get_duration_micro_s = %.1f\n  total_set_duration_micro_s = %.1f\n" %\
+               "  total_get_duration_micro_s = %.1f\n  total_set_duration_micro_s = %.1f\n  mean_access_duration_ms = %.1f\n" %\
                (self.num_accesses, self.num_misses, self.num_hits, self.hit_ratio, self.total_get_duration_micro_s,
-                self.total_set_duration_micro_s)
+                self.total_set_duration_micro_s, self.mean_access_duration_ms)
 
     def __repr__(self):
         return str(self)
@@ -110,6 +111,8 @@ def get_opt_beladi_cache_hit_ratio(transitions, cache_size_bytes):
 def get_cache_summary(transitions):
     summary = CacheSummary()
 
+    count = 0
+
     for t in transitions:
         is_get_action = False
         is_hit = True
@@ -119,15 +122,18 @@ def get_cache_summary(transitions):
                 summary.num_misses += 1
                 is_hit = False
             elif a.type == "Get":
+                count += 1
                 summary.num_accesses += 1
                 is_get_action = True
                 summary.total_get_duration_micro_s += a.duration_micro_secs
             elif a.type == "Set":
+                count += 1
                 summary.total_set_duration_micro_s += a.duration_micro_secs
 
         if is_hit and is_get_action:
             summary.num_hits += 1
 
     summary.hit_ratio = summary.num_hits / summary.num_accesses
+    summary.mean_access_duration_ms = (summary.total_get_duration_micro_s + summary.total_set_duration_micro_s) / count / 1000
 
     return summary
