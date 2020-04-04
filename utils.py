@@ -7,21 +7,22 @@ sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__))))
 from base import DataModelTransition
 
 
-class CacheSummary:
+class CacheStats:
     def __init__(self):
         self.num_accesses = 0
         self.num_misses = 0
         self.num_hits = 0
         self.hit_ratio = 0
-        self.total_get_duration_micro_s = 0
-        self.total_set_duration_micro_s = 0
-        self.mean_access_duration_ms = 0
+        self.num_loads = 0
+        self.num_unloads = 0
+        self.mean_load_duration_ms = 0
+        self.mean_unload_duration_ms = 0
 
     def __str__(self):
-        return "Cache summary:\n  num_accesses = %i\n  num_misses = %i\n  num_hits = %i\n  hit_ratio = %.2f\n" \
-               "  total_get_duration_micro_s = %.1f\n  total_set_duration_micro_s = %.1f\n  mean_access_duration_ms = %.1f\n" %\
-               (self.num_accesses, self.num_misses, self.num_hits, self.hit_ratio, self.total_get_duration_micro_s,
-                self.total_set_duration_micro_s, self.mean_access_duration_ms)
+        return "Cache stats:\n  num_accesses = %i\n  num_misses = %i\n  num_hits = %i\n  hit_ratio = %.2f\n" \
+               "  num_loads = %i\n  num_unloads = %i\n  mean_load_duration_ms = %.3f\n  mean_unload_duration_ms = %.3f\n" %\
+               (self.num_accesses, self.num_misses, self.num_hits, self.hit_ratio,
+                self.num_loads, self.num_unloads, self.mean_load_duration_ms, self.mean_unload_duration_ms)
 
     def __repr__(self):
         return str(self)
@@ -90,10 +91,21 @@ def get_opt_beladi_cache_hit_ratio(transitions, cache_size_bytes):
                             for g in garbage:
                                 del current_cache_items[g]
                         else:
-                            for key_to_get in reversed(get_keys_seq):
+                            eviction_candidates = {}
+
+                            for i, key_to_get in enumerate(reversed(get_keys_seq)):
                                 if key_to_get in current_cache_items:
-                                    del current_cache_items[key_to_get]
-                                    break
+                                    eviction_candidates[key_to_get] = i
+
+                            key_to_evict = None
+                            key_to_evict_distance = 0
+
+                            for key, dist in eviction_candidates.items():
+                                if dist > key_to_evict_distance:
+                                    key_to_evict_distance = dist
+                                    key_to_evict = key
+
+                            del current_cache_items[key_to_evict]
 
                     current_cache_items[a.item_key] = a.item_size_bytes
 
@@ -108,10 +120,8 @@ def get_opt_beladi_cache_hit_ratio(transitions, cache_size_bytes):
     return num_hits / num_accesses
 
 
-def get_cache_summary(transitions):
-    summary = CacheSummary()
-
-    count = 0
+def compute_cache_stats(transitions):
+    stats = CacheStats()
 
     for t in transitions:
         is_get_action = False
@@ -119,21 +129,22 @@ def get_cache_summary(transitions):
 
         for a in t.actions_sequence:
             if a.type == "Load":
-                summary.num_misses += 1
+                stats.num_misses += 1
+                stats.mean_load_duration_ms += a.duration_micro_secs
+                stats.num_loads += 1
                 is_hit = False
+            elif a.type == "Unload":
+                stats.mean_unload_duration_ms += a.duration_micro_secs
+                stats.num_unloads += 1
             elif a.type == "Get":
-                count += 1
-                summary.num_accesses += 1
+                stats.num_accesses += 1
                 is_get_action = True
-                summary.total_get_duration_micro_s += a.duration_micro_secs
-            elif a.type == "Set":
-                count += 1
-                summary.total_set_duration_micro_s += a.duration_micro_secs
 
         if is_hit and is_get_action:
-            summary.num_hits += 1
+            stats.num_hits += 1
 
-    summary.hit_ratio = summary.num_hits / summary.num_accesses
-    summary.mean_access_duration_ms = (summary.total_get_duration_micro_s + summary.total_set_duration_micro_s) / count / 1000
+    stats.hit_ratio = stats.num_hits / stats.num_accesses
+    stats.mean_load_duration_ms /= stats.num_loads * 1000
+    stats.mean_unload_duration_ms /= stats.num_unloads * 1000
 
-    return summary
+    return stats

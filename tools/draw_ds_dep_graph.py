@@ -46,7 +46,7 @@ if __name__ == "__main__":
             # sample `t` - DS_arithmetics : [ 4 [ 0] ] ; [ 7 [ 1] ]
 
             it1 = t.split(" : ")
-            estimator_name = it1[0] + " (%i)" % n
+            estimator_name = it1[0]# + " (%i)" % n
 
             if estimator_name not in estimators_colors:
                 # Assign random color
@@ -106,7 +106,7 @@ if __name__ == "__main__":
 
     # 3.1. PyGraphviz part
     deps.layout()
-    deps.draw(TMP_FILE, args="-Gdpi=%i" % DPI)
+    deps.draw(TMP_FILE, args="-Gdpi=%i" % DPI, prog='unflatten')
 
     # 3.2. Matplotlib part
     plt.figure(figsize=(10, 10))
@@ -114,13 +114,13 @@ if __name__ == "__main__":
     os.remove(TMP_FILE)
 
     plt.legend(
-        [Line2D([0], [0], color=v, lw=4) for v in estimators_colors.values()],
-        estimators_colors.keys(),
+        [Line2D([0], [0], color=v, lw=2) for v in estimators_colors.values()],
+        [f if f != "0" else "No consumer" for f in estimators_colors.keys()],
         loc="upper center",
-        bbox_to_anchor=(0.5, 0.01),
+        bbox_to_anchor=(1.01, 1),
         shadow=True,
         fancybox=True,
-        ncol=2,
+        ncol=1,
         prop={'size': 22}
     )
     plt.axis('off')
